@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _fillDemo() {
-    _emailCtrl.text = 'demo@uni.edu.pk';
+    _emailCtrl.text = 'rollno@uog.edu.pk';
     _passwordCtrl.text = '123456';
   }
 
@@ -142,18 +142,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppTheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.info_outline,
                             size: 16, color: AppTheme.primary),
                         SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Tap to fill demo: demo@uni.edu.pk / 123456',
-                            style: TextStyle(
-                                fontSize: 12, color: AppTheme.primary),
-                          ),
-                        ),
+                        
                       ],
                     ),
                   ),

@@ -21,20 +21,17 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId =
-          context.read<AuthProvider>().currentUser?.id ?? '';
-      context.read<BookProvider>().loadDemoData(userId);
-      context.read<ChatProvider>().loadDemoChats(userId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final userId = context.read<AuthProvider>().currentUser?.id ?? '';
+      await context.read<BookProvider>().loadData(userId);
+      await context.read<ChatProvider>().loadChats(userId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final userId =
-        context.watch<AuthProvider>().currentUser?.id ?? '';
-    final unread =
-        context.watch<ChatProvider>().totalUnread(userId);
+    final userId = context.watch<AuthProvider>().currentUser?.id ?? '';
+    final unread = context.watch<ChatProvider>().totalUnread(userId);
 
     final screens = [
       const HomeScreen(),

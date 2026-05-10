@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -5,6 +6,7 @@ import '../../models/book_listing_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../services/asset_service.dart';
 import '../../utils/app_theme.dart';
 import '../messaging/chat_screen.dart';
 
@@ -25,7 +27,30 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     });
   }
 
-  void _startChat() {
+  /// Renders a local file image or a network image depending on the path.
+  Widget _buildImage(String stored) {
+    final path = AssetService().resolve(stored);
+    if (path.startsWith('/')) {
+      return Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Center(
+          child: Icon(Icons.menu_book,
+              size: 80, color: AppTheme.primary.withValues(alpha: 0.4)),
+        ),
+      );
+    }
+    return Image.network(
+      path,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Center(
+        child: Icon(Icons.menu_book,
+            size: 80, color: AppTheme.primary.withValues(alpha: 0.4)),
+      ),
+    );
+  }
+
+  Future<void> _startChat() async {
     final user = context.read<AuthProvider>().currentUser!;
     if (user.id == widget.listing.sellerId) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -33,7 +58,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       );
       return;
     }
-    final chat = context.read<ChatProvider>().startChat(
+    final chat = await context.read<ChatProvider>().startChat(
           bookId: widget.listing.id,
           bookTitle: widget.listing.title,
           buyerId: user.id,
@@ -41,8 +66,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           sellerId: widget.listing.sellerId,
           sellerName: widget.listing.sellerName,
         );
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ChatScreen(chat: chat)));
+    if (mounted) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => ChatScreen(chat: chat)));
+    }
   }
 
   Future<void> _handleMenuAction(String val) async {
@@ -52,8 +79,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Delete Listing'),
-          content:
-              const Text('Are you sure you want to delete this listing?'),
+          content: const Text('Are you sure you want to delete this listing?'),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -89,8 +115,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             PopupMenuButton<String>(
               onSelected: _handleMenuAction,
               itemBuilder: (_) => [
-                const PopupMenuItem(
-                    value: 'sold', child: Text('Mark as Sold')),
+                const PopupMenuItem(value: 'sold', child: Text('Mark as Sold')),
                 const PopupMenuItem(
                     value: 'delete',
                     child: Text('Delete Listing',
@@ -109,26 +134,23 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               width: double.infinity,
               color: AppTheme.primary.withValues(alpha: 0.1),
               child: listing.images.isNotEmpty
-                  ? Image.network(listing.images.first,
-                      fit: BoxFit.cover)
+                  ? _buildImage(listing.images.first)
                   : Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.menu_book,
                               size: 80,
-                              color:
-                                  AppTheme.primary.withValues(alpha: 0.4)),
+                              color: AppTheme.primary.withValues(alpha: 0.4)),
                           const SizedBox(height: 8),
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(
                               listing.title,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: AppTheme.primary
-                                      .withValues(alpha: 0.7),
+                                  color:
+                                      AppTheme.primary.withValues(alpha: 0.7),
                                   fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -148,8 +170,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       Expanded(
                         child: Text(listing.title,
                             style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold)),
+                                fontSize: 20, fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(width: 8),
                       _TypeBadge(type: listing.listingType),
@@ -226,8 +247,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       listing.exchangePreference!.isNotEmpty) ...[
                     const Text('Exchange Preference',
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -239,14 +259,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.swap_horiz,
-                              color: AppTheme.accent),
+                          const Icon(Icons.swap_horiz, color: AppTheme.accent),
                           const SizedBox(width: 8),
                           Expanded(
-                              child: Text(
-                                  listing.exchangePreference!,
-                                  style:
-                                      const TextStyle(fontSize: 14))),
+                              child: Text(listing.exchangePreference!,
+                                  style: const TextStyle(fontSize: 14))),
                         ],
                       ),
                     ),
@@ -255,20 +272,18 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
 
                   // Description
                   const Text('Description',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text(listing.description,
                       style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: AppTheme.textDark)),
+                          fontSize: 14, height: 1.5, color: AppTheme.textDark)),
                   const SizedBox(height: 16),
 
                   // Seller
                   const Text('Seller',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -296,8 +311,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(listing.sellerName,
                                   style: const TextStyle(
@@ -305,16 +319,14 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                               Row(
                                 children: [
                                   const Icon(Icons.star,
-                                      size: 14,
-                                      color: Colors.amber),
+                                      size: 14, color: Colors.amber),
                                   const SizedBox(width: 2),
                                   Text(
                                     listing.sellerRating > 0
                                         ? listing.sellerRating
                                             .toStringAsFixed(1)
                                         : 'New',
-                                    style: const TextStyle(
-                                        fontSize: 12),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                 ],
                               ),
@@ -342,8 +354,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       const SizedBox(width: 4),
                       Text('${listing.views} views',
                           style: const TextStyle(
-                              color: AppTheme.textGrey,
-                              fontSize: 12)),
+                              color: AppTheme.textGrey, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 80),
@@ -400,13 +411,11 @@ class _TypeBadge extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-          color: color, borderRadius: BorderRadius.circular(6)),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
       child: Text(type,
           style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold)),
+              color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -421,8 +430,7 @@ class _DetailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -438,8 +446,8 @@ class _DetailItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(label,
-                    style: const TextStyle(
-                        fontSize: 9, color: AppTheme.textGrey)),
+                    style:
+                        const TextStyle(fontSize: 9, color: AppTheme.textGrey)),
                 Text(value,
                     style: const TextStyle(
                         fontSize: 11, fontWeight: FontWeight.w600),

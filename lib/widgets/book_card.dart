@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/book_listing_model.dart';
+import '../services/asset_service.dart';
 import '../utils/app_theme.dart';
 
 class BookCard extends StatelessWidget {
@@ -8,67 +10,107 @@ class BookCard extends StatelessWidget {
 
   const BookCard({super.key, required this.listing, required this.onTap});
 
+  Color get _conditionColor {
+    switch (listing.condition) {
+      case 'Like New':
+        return const Color(0xFF2E7D32);
+      case 'Very Good':
+        return const Color(0xFF388E3C);
+      case 'Good':
+        return const Color(0xFF1976D2);
+      case 'Acceptable':
+        return const Color(0xFFF57C00);
+      case 'Poor':
+        return const Color(0xFFD32F2F);
+      default:
+        return AppTheme.textGrey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image area
+            // ── Image ──────────────────────────────────────────
             Expanded(
-              flex: 5,
+              flex: 11,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  listing.images.isNotEmpty
-                      ? Image.network(
-                          listing.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _BookPlaceholder(title: listing.title),
-                        )
-                      : _BookPlaceholder(title: listing.title),
+                  _BookImage(listing: listing),
+                  // Type badge top-left
                   Positioned(
                     top: 8,
                     left: 8,
                     child: _TypeBadge(type: listing.listingType),
                   ),
+                  // Condition badge top-right
                   Positioned(
                     top: 8,
                     right: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                          ),
+                        ],
                       ),
-                      child: Text(listing.conditionEmoji,
-                          style: const TextStyle(fontSize: 12)),
+                      child: Text(
+                        listing.condition,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: _conditionColor,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            // Info area
+
+            // ── Info ───────────────────────────────────────────
             Expanded(
-              flex: 4,
+              flex: 8,
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       listing.title,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppTheme.textDark,
+                        height: 1.2,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       listing.author,
                       style: const TextStyle(
@@ -77,30 +119,34 @@ class BookCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
+                    // Price row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           listing.priceDisplay,
                           style: const TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13),
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                         Row(
                           children: [
                             const Icon(Icons.remove_red_eye_outlined,
-                                size: 12, color: AppTheme.textGrey),
+                                size: 11, color: AppTheme.textGrey),
                             const SizedBox(width: 2),
-                            Text('${listing.views}',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.textGrey)),
+                            Text(
+                              '${listing.views}',
+                              style: const TextStyle(
+                                  fontSize: 10, color: AppTheme.textGrey),
+                            ),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       listing.course,
                       style: const TextStyle(
@@ -119,40 +165,77 @@ class BookCard extends StatelessWidget {
   }
 }
 
-class _BookPlaceholder extends StatelessWidget {
-  final String title;
-  const _BookPlaceholder({required this.title});
+class _BookImage extends StatelessWidget {
+  final BookListingModel listing;
+  const _BookImage({required this.listing});
 
   @override
   Widget build(BuildContext context) {
-    final colors = [
-      const Color(0xFF1565C0),
-      const Color(0xFF2E7D32),
-      const Color(0xFF6A1B9A),
-      const Color(0xFFE65100),
-      const Color(0xFF00695C),
-    ];
-    final color = colors[title.length % colors.length];
+    if (listing.images.isNotEmpty) {
+      final raw = listing.images.first;
+      final img = AssetService().resolve(raw);
+      // Local file path
+      if (img.startsWith('/')) {
+        return Image.file(File(img),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _Placeholder(title: listing.title));
+      }
+      // Network URL
+      return Image.network(img,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _Placeholder(title: listing.title));
+    }
+    return _Placeholder(title: listing.title);
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  final String title;
+  const _Placeholder({required this.title});
+
+  static const _colors = [
+    Color(0xFF1565C0),
+    Color(0xFF2E7D32),
+    Color(0xFF6A1B9A),
+    Color(0xFFBF360C),
+    Color(0xFF00695C),
+    Color(0xFF4527A0),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colors[title.length % _colors.length];
     return Container(
-      color: color.withValues(alpha: 0.15),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.08),
+          ],
+        ),
+      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.menu_book,
-                size: 40, color: color.withValues(alpha: 0.6)),
-            const SizedBox(height: 4),
+            Icon(Icons.menu_book_rounded,
+                size: 38, color: color.withValues(alpha: 0.5)),
+            const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
                 title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 10,
-                    color: color,
-                    fontWeight: FontWeight.w600),
+                  fontSize: 10,
+                  color: color.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                ),
               ),
             ),
           ],
@@ -177,17 +260,23 @@ class _TypeBadge extends StatelessWidget {
         color = AppTheme.accent;
         break;
       default:
-        color = Colors.blue;
+        color = const Color(0xFF1976D2);
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-          color: color, borderRadius: BorderRadius.circular(4)),
-      child: Text(type,
-          style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold)),
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        type,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }

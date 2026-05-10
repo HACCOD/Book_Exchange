@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/user_model.dart';
+import '../services/database_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _error;
 
+  final _db = DatabaseService();
+
+  // Callbacks so AuthProvider can tell other providers to reset
+  // without creating circular dependencies.
+  VoidCallback? onLogout;
+
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
   bool get isLoading => _isLoading;
   String? get error => _error;
-
-  final List<UserModel> _registeredUsers = [];
 
   Future<bool> register({
     required String name,
@@ -26,15 +31,7 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 1));
-
-    final exists = _registeredUsers.any((u) => u.email == email);
-    if (exists) {
-      _error = 'An account with this email already exists.';
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
+    await Future.delayed(const Duration(milliseconds: 300));
 
     final user = UserModel(
       id: const Uuid().v4(),
@@ -43,10 +40,22 @@ class AuthProvider extends ChangeNotifier {
       university: university,
       department: department,
       phone: phone,
+      // New users start with zero stats — no defaults
+      rating: 0.0,
+      totalRatings: 0,
+      totalListings: 0,
+      totalTransactions: 0,
       createdAt: DateTime.now(),
     );
 
-    _registeredUsers.add(user);
+    final success = await _db.registerUser(user, password);
+    if (!success) {
+      _error = 'An account with this email already exists.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+
     _currentUser = user;
     _isLoading = false;
     notifyListeners();
@@ -61,40 +70,18 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    UserModel? found;
-    try {
-      found = _registeredUsers.firstWhere((u) => u.email == email);
-    } catch (_) {
-      found = null;
-    }
+    final user = await _db.loginUser(email, password);
 
-    // Demo account fallback
-    if (found == null && email == 'demo@uni.edu.pk' && password == '123456') {
-      found = UserModel(
-        id: 'demo-user-001',
-        name: 'Ali Hassan',
-        email: 'demo@uni.edu.pk',
-        university: 'FAST NUCES',
-        department: 'Computer Science',
-        phone: '03001234567',
-        rating: 4.5,
-        totalRatings: 12,
-        totalListings: 8,
-        totalTransactions: 5,
-        createdAt: DateTime.now().subtract(const Duration(days: 90)),
-      );
-    }
-
-    if (found == null) {
+    if (user == null) {
       _error = 'Invalid email or password.';
       _isLoading = false;
       notifyListeners();
       return false;
     }
 
-    _currentUser = found;
+    _currentUser = user;
     _isLoading = false;
     notifyListeners();
     return true;
@@ -113,11 +100,14 @@ class AuthProvider extends ChangeNotifier {
       department: department,
       profileImage: profileImage,
     );
+    await _db.updateUser(_currentUser!);
     notifyListeners();
   }
 
   void logout() {
     _currentUser = null;
+    // Notify other providers to clear user-specific data
+    onLogout?.call();
     notifyListeners();
   }
 

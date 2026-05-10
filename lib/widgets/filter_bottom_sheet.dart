@@ -89,7 +89,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 controller: scrollCtrl,
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _SectionTitle('Sort By'),
+                  const _SectionTitle('Sort By'),
                   Wrap(
                     spacing: 8,
                     children: AppConstants.sortOptions
@@ -109,7 +109,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 20),
 
-                  _SectionTitle('Listing Type'),
+                  const _SectionTitle('Listing Type'),
                   Wrap(
                     spacing: 8,
                     children: ['All', 'Sell', 'Exchange']
@@ -132,7 +132,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _SectionTitle('Max Price'),
+                      const _SectionTitle('Max Price'),
                       Text(
                         'Rs. ${_maxPrice.toStringAsFixed(0)}',
                         style: const TextStyle(
@@ -151,7 +151,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 20),
 
-                  _SectionTitle('Department'),
+                  const _SectionTitle('Department'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,

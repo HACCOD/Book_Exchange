@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
@@ -5,6 +6,7 @@ import '../../models/book_listing_model.dart';
 import '../../models/review_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/book_provider.dart';
+import '../../services/asset_service.dart';
 import '../../utils/app_theme.dart';
 import '../listing/book_detail_screen.dart';
 import 'edit_profile_screen.dart';
@@ -28,8 +30,7 @@ class ProfileScreen extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const EditProfileScreen()),
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
             ),
           ),
           IconButton(
@@ -93,8 +94,8 @@ class ProfileScreen extends StatelessWidget {
               Navigator.pop(context);
               context.read<AuthProvider>().logout();
             },
-            child: const Text('Sign Out',
-                style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Sign Out', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -115,6 +116,36 @@ class _ProfileHeader extends StatelessWidget {
     required this.reviewsCount,
   });
 
+  Widget _buildAvatar(dynamic user) {
+    if (user.profileImage != null) {
+      final img = user.profileImage as String;
+      if (img.startsWith('/')) {
+        return ClipOval(
+          child:
+              Image.file(File(img), width: 88, height: 88, fit: BoxFit.cover),
+        );
+      }
+      return ClipOval(
+        child: Image.network(img,
+            width: 88,
+            height: 88,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Text(
+                  user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold),
+                )),
+      );
+    }
+    return Text(
+      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+      style: const TextStyle(
+          color: AppTheme.primary, fontSize: 36, fontWeight: FontWeight.bold),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -125,22 +156,15 @@ class _ProfileHeader extends StatelessWidget {
           CircleAvatar(
             radius: 44,
             backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: AppTheme.primary,
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold),
-            ),
+            child: _buildAvatar(user),
           ),
           const SizedBox(height: 12),
           Text(user.name,
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 2),
           Text(user.email,
-              style: const TextStyle(
-                  color: AppTheme.textGrey, fontSize: 13)),
+              style: const TextStyle(color: AppTheme.textGrey, fontSize: 13)),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -151,8 +175,8 @@ class _ProfileHeader extends StatelessWidget {
               Flexible(
                 child: Text(
                   '${user.university} • ${user.department}',
-                  style: const TextStyle(
-                      color: AppTheme.textGrey, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppTheme.textGrey, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -170,8 +194,7 @@ class _ProfileHeader extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${user.rating.toStringAsFixed(1)} (${user.totalRatings} reviews)',
-              style: const TextStyle(
-                  color: AppTheme.textGrey, fontSize: 12),
+              style: const TextStyle(color: AppTheme.textGrey, fontSize: 12),
             ),
             const SizedBox(height: 12),
           ],
@@ -180,9 +203,7 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               _StatItem(label: 'Listings', value: '$listingsCount'),
               Container(width: 1, height: 30, color: AppTheme.divider),
-              _StatItem(
-                  label: 'Transactions',
-                  value: '$transactionsCount'),
+              _StatItem(label: 'Transactions', value: '$transactionsCount'),
               Container(width: 1, height: 30, color: AppTheme.divider),
               _StatItem(label: 'Reviews', value: '$reviewsCount'),
             ],
@@ -207,8 +228,7 @@ class _StatItem extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primary)),
           Text(label,
-              style: const TextStyle(
-                  color: AppTheme.textGrey, fontSize: 12)),
+              style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
         ],
       );
 }
@@ -229,12 +249,10 @@ class _MyListingsTab extends StatelessWidget {
             SizedBox(height: 12),
             Text('No listings yet',
                 style: TextStyle(
-                    color: AppTheme.textGrey,
-                    fontWeight: FontWeight.w600)),
+                    color: AppTheme.textGrey, fontWeight: FontWeight.w600)),
             SizedBox(height: 4),
             Text('Tap the Sell tab to create your first listing',
-                style: TextStyle(
-                    color: AppTheme.textGrey, fontSize: 12)),
+                style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
           ],
         ),
       );
@@ -249,18 +267,22 @@ class _MyListingsTab extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.all(12),
             leading: Container(
-              width: 50,
-              height: 60,
+              width: 56,
+              height: 64,
               decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.menu_book,
-                  color: AppTheme.primary),
+              clipBehavior: Clip.antiAlias,
+              child: book.images.isNotEmpty
+                  ? Image.file(File(AssetService().resolve(book.images.first)),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.menu_book, color: AppTheme.primary))
+                  : const Icon(Icons.menu_book, color: AppTheme.primary),
             ),
             title: Text(book.title,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             subtitle: Column(
@@ -279,9 +301,7 @@ class _MyListingsTab extends StatelessWidget {
                             : AppTheme.primary),
                     const SizedBox(width: 6),
                     _Badge(
-                        text: book.isAvailable
-                            ? 'Available'
-                            : 'Sold',
+                        text: book.isAvailable ? 'Available' : 'Sold',
                         color: book.isAvailable
                             ? AppTheme.success
                             : AppTheme.textGrey),
@@ -298,8 +318,7 @@ class _MyListingsTab extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) =>
-                      BookDetailScreen(listing: book)),
+                  builder: (_) => BookDetailScreen(listing: book)),
             ),
           ),
         );
@@ -315,17 +334,14 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(text,
             style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.bold)),
+                color: color, fontSize: 10, fontWeight: FontWeight.bold)),
       );
 }
 
@@ -345,8 +361,7 @@ class _TransactionsTab extends StatelessWidget {
             SizedBox(height: 12),
             Text('No transactions yet',
                 style: TextStyle(
-                    color: AppTheme.textGrey,
-                    fontWeight: FontWeight.w600)),
+                    color: AppTheme.textGrey, fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -356,8 +371,7 @@ class _TransactionsTab extends StatelessWidget {
       itemCount: transactions.length,
       itemBuilder: (ctx, i) {
         final t = transactions[i];
-        final userId =
-            context.read<AuthProvider>().currentUser!.id;
+        final userId = context.read<AuthProvider>().currentUser!.id;
         final isSeller = t.sellerId == userId;
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
@@ -367,17 +381,12 @@ class _TransactionsTab extends StatelessWidget {
                   ? AppTheme.success.withValues(alpha: 0.15)
                   : AppTheme.accent.withValues(alpha: 0.15),
               child: Icon(
-                isSeller
-                    ? Icons.arrow_upward
-                    : Icons.arrow_downward,
-                color: isSeller
-                    ? AppTheme.success
-                    : AppTheme.accent,
+                isSeller ? Icons.arrow_upward : Icons.arrow_downward,
+                color: isSeller ? AppTheme.success : AppTheme.accent,
               ),
             ),
             title: Text(t.bookTitle,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
               isSeller
                   ? 'Sold to ${t.buyerName}'
@@ -394,14 +403,12 @@ class _TransactionsTab extends StatelessWidget {
                       : 'Exchange',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isSeller
-                          ? AppTheme.success
-                          : AppTheme.error),
+                      color: isSeller ? AppTheme.success : AppTheme.error),
                 ),
                 Text(
                   '${t.completedAt.day}/${t.completedAt.month}/${t.completedAt.year}',
-                  style: const TextStyle(
-                      fontSize: 11, color: AppTheme.textGrey),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textGrey),
                 ),
               ],
             ),
@@ -423,13 +430,11 @@ class _ReviewsTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.star_outline,
-                size: 48, color: AppTheme.textGrey),
+            Icon(Icons.star_outline, size: 48, color: AppTheme.textGrey),
             SizedBox(height: 12),
             Text('No reviews yet',
                 style: TextStyle(
-                    color: AppTheme.textGrey,
-                    fontWeight: FontWeight.w600)),
+                    color: AppTheme.textGrey, fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -450,8 +455,7 @@ class _ReviewsTab extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 18,
-                      backgroundColor:
-                          AppTheme.primary.withValues(alpha: 0.15),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
                       child: Text(
                         r.reviewerName[0].toUpperCase(),
                         style: const TextStyle(
@@ -462,24 +466,21 @@ class _ReviewsTab extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(r.reviewerName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           Text('For: ${r.bookTitle}',
                               style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.textGrey)),
+                                  fontSize: 11, color: AppTheme.textGrey)),
                         ],
                       ),
                     ),
                     RatingBarIndicator(
                       rating: r.rating,
-                      itemBuilder: (_, __) => const Icon(
-                          Icons.star,
-                          color: Colors.amber),
+                      itemBuilder: (_, __) =>
+                          const Icon(Icons.star, color: Colors.amber),
                       itemCount: 5,
                       itemSize: 16,
                     ),
@@ -487,13 +488,12 @@ class _ReviewsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(r.comment,
-                    style: const TextStyle(
-                        fontSize: 13, height: 1.4)),
+                    style: const TextStyle(fontSize: 13, height: 1.4)),
                 const SizedBox(height: 4),
                 Text(
                   '${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}',
-                  style: const TextStyle(
-                      fontSize: 11, color: AppTheme.textGrey),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textGrey),
                 ),
               ],
             ),
@@ -514,8 +514,8 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset,
-          bool overlapsContent) =>
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
       Container(color: Colors.white, child: tabBar);
 
   @override
